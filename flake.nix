@@ -1,37 +1,29 @@
 {
-  description = "A very basic flake";
+  description = "My Personal NixOS and Darwin System Flake Configuration";
 
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    home-manager = {
-      url = github:nix-community/home-manager;
-      inputs.nixpkgs.follows = "nixpkgs";
+  inputs =                                                                  # All flake references used to build my NixOS setup. These are dependencies.
+    {
+      nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";                  # Nix Packages
+
+      home-manager = {                                                      # User Package Management
+        url = "github:nix-community/home-manager";
+        inputs.nixpkgs.follows = "nixpkgs";
+      };
+
     };
-  };
 
-  outputs = { self, nixpkgs, home-manager }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
-      lib = nixpkgs.lib;
-    in {
-      nixosConfigurations = {
-        sharon = lib.nixosSystem {
-          inherit system;
-          modules = [
-            ./configuration.nix
-            home-manager.nixosModules.home-manager {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.sharon = {
-               imports = [ ./home.nix ];
-              }; 
-            }
-          ];
-        };
-      };
+  outputs = inputs @ { self, nixpkgs, home-manager, ... }:   # Function that tells my flake which to use and what do what to do with the dependencies.
+    let                                                                     # Variables that can be used in the config files.
+      user = "sharon";
+      location = "$HOME/sharon-flakes";
+    in                                                                      # Use above variables in ...
+    {
+      nixosConfigurations = (                                               # NixOS configurations
+        import ./hosts {                                                    # Imports ./hosts/default.nix
+          inherit (nixpkgs) lib;
+          inherit inputs nixpkgs home-manager user location;   # Also inherit home-manager so it does not need to be defined here.
+        }
+      );
+
     };
 }
